@@ -1,0 +1,10 @@
+{
+  "name":"DeepuNotes",
+  "short_name":"DeepuNotes",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#f3f4f6",
+  "theme_color":"#111827",
+  "orientation":"any",
+  "icons":[]
+}
