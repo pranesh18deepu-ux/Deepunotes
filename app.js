@@ -81,20 +81,131 @@ function renderText(){
  });
 }
 function point(ev){const r=$("noteCanvas").getBoundingClientRect();return {x:ev.clientX-r.left,y:ev.clientY-r.top,p:ev.pressure||.5}}
-$("noteCanvas").addEventListener("pointerdown",ev=>{
- if(ev.pointerType!=="pen" && tool!=="text")return;
- if(tool==="text"){const pt=point(ev),page=currentPage();pushUndo();page.elements.push({id:uid(),type:"text",x:pt.x,y:pt.y,w:220,h:40,text:"Type here"});renderText();save();return}
- drawing=true;ev.currentTarget.setPointerCapture(ev.pointerId);const pt=point(ev);
- if(tool==="eraser"){eraseAt(pt);return}
- currentStroke={id:uid(),type:"stroke",tool,points:[pt],color:tool==="highlighter"?"#facc15":$("color").value,width:tool==="highlighter"?Math.max(10,Number($("size").value)*3):Number($("size").value)};
- pushUndo();currentPage().elements.push(currentStroke);drawStroke(currentStroke);
+// iPad / Apple Pencil drawing engine.
+// Pencil strokes use Pointer Events. Finger input is ignored for drawing so the
+// canvas remains Pencil-first, while pointer capture keeps strokes continuous.
+const noteCanvas = $("noteCanvas");
+let activePointerId = null;
+
+try { noteCanvas.style.touchAction = "none"; } catch(e) {}
+
+function addPointFromEvent(ev) {
+ const pt = point(ev);
+ if (!currentStroke) return;
+ currentStroke.points.push(pt);
+ // Draw incrementally for smoother Pencil response.
+ const pts = currentStroke.points;
+ const ctx = ctx2d();
+ ctx.save();
+ ctx.lineCap = "round";
+ ctx.lineJoin = "round";
+ ctx.globalAlpha = currentStroke.tool === "highlighter" ? .28 : 1;
+ ctx.strokeStyle = currentStroke.color;
+ ctx.lineWidth = currentStroke.width;
+ const n = pts.length;
+ if (n >= 2) {
+   const a = pts[n-2], b = pts[n-1];
+   ctx.beginPath();
+   ctx.moveTo(a.x, a.y);
+   ctx.lineTo(b.x, b.y);
+   ctx.stroke();
+ } else {
+   ctx.beginPath();
+   ctx.arc(pt.x, pt.y, Math.max(1, currentStroke.width/2), 0, Math.PI*2);
+   ctx.fillStyle = currentStroke.color;
+   ctx.globalAlpha = currentStroke.tool === "highlighter" ? .28 : 1;
+   ctx.fill();
+ }
+ ctx.restore();
+}
+
+noteCanvas.addEventListener("pointerdown", ev => {
+ ev.preventDefault();
+
+ // Text mode can use normal touch/click as well.
+ if (tool === "text") {
+   const pt = point(ev), page = currentPage();
+   if (!page) return;
+   pushUndo();
+   page.elements.push({
+     id: uid(), type: "text", x: pt.x, y: pt.y, w: 220, h: 40, text: "Type here"
+   });
+   renderText();
+   save();
+   return;
+ }
+
+ // Only Apple Pencil/stylus starts handwriting.
+ if (ev.pointerType !== "pen") return;
+ if (!currentPage()) return;
+
+ drawing = true;
+ activePointerId = ev.pointerId;
+
+ try { noteCanvas.setPointerCapture(ev.pointerId); } catch(e) {}
+
+ const pt = point(ev);
+
+ if (tool === "eraser") {
+   pushUndo();
+   eraseAt(pt);
+   return;
+ }
+
+ currentStroke = {
+   id: uid(),
+   type: "stroke",
+   tool,
+   points: [pt],
+   color: tool === "highlighter" ? "#facc15" : $("color").value,
+   width: tool === "highlighter"
+     ? Math.max(10, Number($("size").value) * 3)
+     : Number($("size").value)
+ };
+ pushUndo();
+ currentPage().elements.push(currentStroke);
+ addPointFromEvent(ev);
 });
-$("noteCanvas").addEventListener("pointermove",ev=>{
- if(!drawing||ev.pointerType!=="pen")return;const pt=point(ev);
- if(tool==="eraser"){eraseAt(pt);return}
- currentStroke.points.push(pt);renderCanvas();
+
+noteCanvas.addEventListener("pointermove", ev => {
+ if (!drawing || ev.pointerId !== activePointerId) return;
+ ev.preventDefault();
+
+ // Do not require pointerType on move; iPad Safari can occasionally omit it
+ // after pointer capture even though the active pointer is the Pencil.
+ const events = typeof ev.getCoalescedEvents === "function"
+   ? ev.getCoalescedEvents()
+   : [ev];
+
+ for (const e of events) {
+   if (tool === "eraser") {
+     eraseAt(point(e));
+   } else {
+     addPointFromEvent(e);
+   }
+ }
 });
-$("noteCanvas").addEventListener("pointerup",async ev=>{if(!drawing)return;drawing=false;currentStroke=null;await save()});
+
+async function finishStroke(ev) {
+ if (!drawing || ev.pointerId !== activePointerId) return;
+ ev.preventDefault();
+ drawing = false;
+ activePointerId = null;
+ currentStroke = null;
+ try { noteCanvas.releasePointerCapture(ev.pointerId); } catch(e) {}
+ await save();
+}
+
+noteCanvas.addEventListener("pointerup", finishStroke);
+noteCanvas.addEventListener("pointercancel", finishStroke);
+noteCanvas.addEventListener("lostpointercapture", async ev => {
+ if (drawing && ev.pointerId === activePointerId) {
+   drawing = false;
+   activePointerId = null;
+   currentStroke = null;
+   await save();
+ }
+});
 function eraseAt(pt){
  const page=currentPage();if(!page)return;
  const before=page.elements.length;
