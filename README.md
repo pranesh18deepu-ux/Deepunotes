@@ -1,24 +1,11 @@
-# DeepuNotes V1
-iPad-first local notebook prototype.
+# DeepuNotes V1.2
+Local-first OneNote-style iPad/PWA prototype.
 
-Included:
-- Notebook / section / page hierarchy
-- Apple Pencil pointer-based handwriting canvas
-- Pen, highlighter, eraser
-- Typed text boxes
-- Ruled/grid/dot backgrounds
-- Undo/redo
-- IndexedDB local persistence
-- Offline PWA service worker
-- .deepunotes JSON backup/restore
-
-Important:
-This V1 does NOT yet implement PDF import/annotation/export. Those should be V2.
-
-For best iPad use, serve the folder from HTTPS or localhost; opening index.html directly from Files may prevent the service worker/PWA features from working.
-
-
-## V1.1 Pencil fix
-This version improves Apple Pencil support on iPad Safari/PWA using robust Pointer Events,
-pointer capture, coalesced Pencil points, pointer cancellation handling, and a versioned
-service-worker cache so the updated JavaScript is loaded.
+## V1.2 changes
+- Apple Pencil / stylus drawing uses robust Pointer Events and also accepts iPad Safari pointer input if Pencil is reported as touch.
+- Incremental smooth stroke rendering with pressure-aware pen width.
+- Full writing-area Focus mode.
+- Explicit Blank / Ruled / Grid / Dot page controls.
+- More reliable canvas sizing and page rendering.
+- Versioned service-worker cache to prevent the old JavaScript from being served.
+- Existing IndexedDB notebooks remain compatible with V1/V1.1.

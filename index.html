@@ -24,11 +24,12 @@
 
   <main>
     <header id="topbar">
-      <button id="sidebarToggle" class="icon">☰</button>
+      <button id="sidebarToggle" class="icon" title="Show notebooks">☰</button>
       <div id="breadcrumbs">DeepuNotes</div>
       <div class="topActions">
         <button id="undo" class="tool" title="Undo">↶</button>
         <button id="redo" class="tool" title="Redo">↷</button>
+        <button id="focusMode" class="tool focusButton" title="Focus / full writing area">⛶ Focus</button>
         <button id="saveStatus" class="status">Saved locally</button>
       </div>
     </header>
@@ -36,8 +37,11 @@
     <section id="workspace">
       <aside id="pagePanel">
         <div class="panelHead">
-          <div id="sectionName">Pages</div>
-          <button id="newPage" class="smallPrimary">＋</button>
+          <div>
+            <div class="panelTitle">Pages</div>
+            <div id="sectionName" class="sectionName">General</div>
+          </div>
+          <button id="newPage" class="smallPrimary" title="New page">＋</button>
         </div>
         <div id="pageList"></div>
       </aside>
@@ -53,17 +57,20 @@
         <div id="pageView" hidden>
           <div class="pageHeader">
             <input id="pageTitle" value="Untitled Page" aria-label="Page title">
-            <select id="backgroundSelect" aria-label="Page background">
-              <option value="blank">Blank</option>
-              <option value="ruled">Ruled</option>
-              <option value="grid">Grid</option>
-              <option value="dot">Dot grid</option>
-            </select>
+            <div class="backgroundButtons" aria-label="Page background">
+              <button data-bg="blank" class="bgBtn active">Blank</button>
+              <button data-bg="ruled" class="bgBtn">Ruled</button>
+              <button data-bg="grid" class="bgBtn">Grid</button>
+              <button data-bg="dot" class="bgBtn">Dot</button>
+            </div>
           </div>
-          <div id="canvasWrap">
+
+          <div id="canvasWrap" class="canvasWrap blank">
             <canvas id="noteCanvas"></canvas>
             <div id="textLayer"></div>
+            <div id="pencilHint">✎ Write anywhere with Apple Pencil</div>
           </div>
+
           <div id="toolbar">
             <button data-tool="pen" class="tool active">✒ Pen</button>
             <button data-tool="highlighter" class="tool">🖍 Highlighter</button>
